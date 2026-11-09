@@ -1,66 +1,81 @@
-# Pipeline de Dados — ETL com base real
+Pipeline de Dados — Online Retail
+Visão geral
+Este projeto implementa um pipeline ETL (Extract, Transform, Load) em Python, utilizando Pandas e a base pública Online Retail, disponibilizada pelo UCI Machine Learning Repository. O fluxo realiza a extração dos dados, seu tratamento, validações de qualidade e geração de arquivos para análise.
 
-## 1. Sobre o projeto
-Este projeto implementa um MVP de pipeline de dados usando Python e Pandas. O fluxo contempla extração, transformação, validação e carga (ETL) com dados reais de transações de comércio eletrônico.
+O notebook também incorpora recursos de confiabilidade e governança: testes automatizados, monitoramento do percentual de registros descartados, idempotência, hashes para identificação dos arquivos e registro de linhagem dos dados (data lineage).
+Importante: a execução ocorre no Google Colab/Jupyter. O armazenamento é feito no sistema de arquivos do ambiente ou em uma pasta do Google Drive, caso configurada. O projeto não utiliza, nesta versão, um serviço de nuvem gerenciado nem um orquestrador como Airflow.
 
-**Importante:** o MVP executa no Google Colab/Jupyter e grava arquivos CSV/JSON no ambiente de execução. Ainda não constitui uma implantação efetiva em nuvem.
-
-## 2. Base de dados
-Foi adotada a base **Online Retail**, do UCI Machine Learning Repository (Chen, 2015). O conjunto reúne 541.909 registros de transações de uma varejista on-line do Reino Unido, entre 01/12/2010 e 09/12/2011. A base contém identificador de fatura, código e descrição do produto, quantidade, data da fatura, preço unitário, identificador do cliente e país.
-
-- Página oficial: https://archive.ics.uci.edu/dataset/352/online+retail
-- DOI: https://doi.org/10.24432/C5BW33
-- Licença: CC BY 4.0 (atribuição obrigatória).
-
-## 3. Objetivos
-- Obter uma base pública e real;
-- Padronizar nomes de colunas e tipos;
-- Remover duplicatas exatas;
-- Identificar e excluir cancelamentos;
-- Tratar registros sem informações essenciais ou com quantidade/preço inválidos;
-- Calcular o valor bruto por linha;
-- Gerar arquivo CSV tratado e relatório de qualidade JSON.
-
-## 4. Tecnologias
-- Python 3.10+
+Fonte dos dados
+- Base: Online Retail
+- Repositório: UCI Machine Learning Repository
+- Identificador UCI: 352
+- Referência: Chen, D. (2015). Online Retail. https://doi.org/10.24432/C5BW33
+- Período coberto: 1º de dezembro de 2010 a 9 de dezembro de 2011
+- Licença informada pelo repositório: CC BY 4.0
+A base contém registros de transações de uma empresa varejista on-line do Reino Unido.
+Estrutura do projeto
+Durante a execução, o notebook cria a seguinte estrutura:
+pipeline-dados-nuvem/
+├── data/
+│   ├── raw/
+│   │   └── online_retail_original.csv
+│   └── processed/
+│       └── online_retail_tratado.csv
+└── outputs/
+    ├── relatorio_qualidade.json
+    └── data_lineage.json
+- data/raw: cópia da base original, antes do tratamento.
+- data/processed: conjunto de dados tratado, em CSV.
+- outputs: relatório de qualidade e metadados de rastreabilidade da execução.
+Tecnologias e bibliotecas
+- Python
 - Pandas
 - ucimlrepo
+- hashlib e json (bibliotecas padrão do Python)
 - Google Colab ou Jupyter Notebook
+Como executar
+1. Abra pipeline_dados_base_real_completo.ipynb no Google Colab ou em um ambiente Jupyter.
+2. Execute as células em ordem, do início ao fim.
+3. Na primeira execução, o notebook instala as dependências necessárias e consulta a base no UCI.
+4. Ao final, verifique os arquivos gerados nas pastas data/ e outputs/.
+Persistência no Google Drive
+Por padrão, o notebook utiliza /content/pipeline-dados-nuvem, que é uma área temporária do Colab. Para manter os arquivos após o encerramento da sessão, monte o Google Drive no Colab e altere BASE_DIR para uma pasta dentro de /content/drive/MyDrive/, conforme o comentário disponível na célula de preparação do ambiente.
+Etapas do pipeline
+1. Extração
+A base Online Retail é obtida diretamente do UCI Machine Learning Repository por meio de fetch_ucirepo(id=352). Uma cópia da fonte é armazenada na camada raw.
+2. Transformação
+O tratamento inclui:
+- padronização dos nomes das colunas;
+- conversão dos campos para os tipos apropriados;
+- remoção de duplicatas exatas;
+- exclusão de faturas de cancelamento, identificadas pelo prefixo C;
+- remoção de registros com campos obrigatórios ausentes ou inválidos;
+- descarte de quantidades e preços não positivos;
+- cálculo do valor total de cada linha (quantidade × valor unitário);
+- renomeação e organização das colunas para análise.
+3. Validação e qualidade
+O notebook executa testes com uma amostra controlada e verifica condições esperadas na base tratada, como ausência de duplicatas e valores positivos para quantidade e preço. Também gera um relatório com os volumes de entrada, saída e descarte.
+4. Carga e rastreabilidade
+Os dados tratados são gravados em CSV. O relatório data_lineage.json registra informações da execução, versão do pipeline, origem, transformações e hashes dos dados/arquivos, permitindo relacionar a saída ao processamento que a gerou.
+5. Monitoramento
+É emitido um alerta no próprio notebook quando o percentual de registros que não chegam à saída atinge ou ultrapassa o limite configurado de 40%. Esse alerta é exibido durante a execução; não representa, nesta versão, notificação automática por e-mail ou mensagem.
+6. Indicadores
+São apresentados indicadores descritivos, como quantidade de registros tratados, faturas e produtos distintos, países presentes e valor total das vendas. O valor monetário da base é expresso em GBP.
+Funcionalidades de confiabilidade
+- Testes automatizados: verificam regras de negócio e invariantes da saída.
+- Monitoramento: sinaliza percentual elevado de registros descartados.
+- Idempotência: compara o conteúdo da saída com o arquivo existente e evita regravação quando não há alteração.
+- Rastreabilidade: registra metadados e hashes para identificar a execução e seus artefatos.
+- Organização em camadas: separa dados brutos, tratados e relatórios.
+Limitações e evoluções futuras
+A solução é executada em lote e depende da execução manual do notebook. A persistência só é durável se o diretório de saída estiver em armazenamento persistente, como o Google Drive. Não estão implementados agendamento/orquestração, alertas externos, banco de dados ou data warehouse gerenciado, controle de acesso, criptografia configurada pelo projeto ou processamento distribuído com Spark. Essas funcionalidades podem ser consideradas em versões futuras.
+Artefatos gerados
+Arquivo	Descrição
+online_retail_original.csv	Cópia dos dados brutos
+online_retail_tratado.csv	Dados após as regras de tratamento
+relatorio_qualidade.json	Indicadores de qualidade e volumes
+data_lineage.json	Metadados e rastreabilidade da execução
 
-## 5. Como o pipeline funciona
-1. **Extract:** obtém a base Online Retail por meio do pacote `ucimlrepo` (identificador UCI 352).
-2. **Transform:** padroniza colunas e tipos, remove duplicatas, identifica cancelamentos e aplica regras de validade.
-3. **Validate:** contabiliza duplicatas, cancelamentos, registros inválidos e percentual retido.
-4. **Load:** grava os dados tratados em CSV e o relatório em JSON.
 
-## 6. Como executar no Google Colab
-1. Abra o arquivo `pipeline_dados_base_real.ipynb` no Google Colab.
-2. Execute as células em ordem.
-3. A primeira célula instala as dependências necessárias.
-4. A etapa de extração consulta o repositório UCI; portanto, é necessária conexão com a internet.
-5. Ao final, serão gerados `online_retail_tratado.csv` e `relatorio_qualidade.json`.
-
-## 7. Regras de tratamento
-- Remoção de duplicatas integralmente iguais;
-- Exclusão de faturas cujo identificador começa com `C` (cancelamentos);
-- Exclusão de linhas sem identificador de fatura, código/descrição de produto ou data;
-- Exclusão de linhas com quantidade ou preço unitário nulos, iguais a zero ou negativos;
-- Cálculo de `valor_total = quantidade × valor_unitario`.
-
-O identificador da fatura é mantido como texto, pois pode conter letras. O identificador do cliente é preservado quando disponível, mas não é obrigatório para manter a linha.
-
-## 8. Saídas
-- `data/processed/online_retail_tratado.csv`
-- `outputs/relatorio_qualidade.json`
-
-O relatório contém os registros de entrada e saída, duplicatas removidas, cancelamentos removidos, registros inválidos, percentual retido, intervalo de datas e valor bruto total.
-
-## 9. Limitações
-- Processamento em memória;
-- Armazenamento em arquivos no ambiente de execução;
-- Sem integração efetiva com Amazon S3, Google Cloud Storage ou Azure Blob Storage;
-- Sem agendamento, monitoramento contínuo, controle de acesso ou criptografia em repouso;
-- Os resultados quantitativos do tratamento são calculados durante a execução e registrados no JSON.
-
-## 10. Referência da base
-CHEN, Daqing. **Online Retail**. UCI Machine Learning Repository, 2015. DOI: https://doi.org/10.24432/C5BW33.
+Referência
+CHEN, D. Online Retail. UCI Machine Learning Repository, 2015. DOI: https://doi.org/10.24432/C5BW33.
